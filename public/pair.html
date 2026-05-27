@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADEZ TECH - QR Login</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a0a;
+      color: #ffffff;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      text-align: center;
+      padding: 40px;
+      background: #111;
+      border-radius: 20px;
+      border: 1px solid #222;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: 0 0 40px rgba(37, 211, 102, 0.1);
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: bold;
+      color: #25d366;
+      margin-bottom: 8px;
+      letter-spacing: 2px;
+    }
+
+    .subtitle {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 30px;
+    }
+
+    #qrcode {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    #qrcode canvas, #qrcode img {
+      border-radius: 12px;
+      border: 4px solid #25d366;
+      padding: 10px;
+      background: white;
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .status.waiting {
+      background: #1a1a1a;
+      color: #888;
+      border: 1px solid #333;
+    }
+
+    .status.connected {
+      background: rgba(37, 211, 102, 0.1);
+      color: #25d366;
+      border: 1px solid #25d366;
+    }
+
+    .status.error {
+      background: rgba(255, 80, 80, 0.1);
+      color: #ff5050;
+      border: 1px solid #ff5050;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #333;
+      border-top: 3px solid #25d366;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .instructions {
+      margin-top: 24px;
+      text-align: left;
+      background: #1a1a1a;
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 13px;
+      color: #aaa;
+      line-height: 1.8;
+    }
+
+    .instructions strong {
+      color: #25d366;
+    }
+
+    .footer {
+      margin-top: 24px;
+      font-size: 12px;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">⚡ ADEZ TECH</div>
+    <div class="subtitle">WhatsApp Bot — Scan to Connect</div>
+
+    <div id="qrcode"></div>
+
+    <div class="status waiting" id="status">
+      <span class="spinner"></span> Waiting for QR code...
+    </div>
+
+    <div class="instructions">
+      <strong>How to scan:</strong><br>
+      1. Open WhatsApp on your phone<br>
+      2. Tap <strong>⋮ Menu</strong> → <strong>Linked Devices</strong><br>
+      3. Tap <strong>Link a Device</strong><br>
+      4. Point camera at QR code above
+    </div>
+
+    <div class="footer">Powered by ADEZ TECH Bot</div>
+  </div>
+
+  <script>
+    const socket = io();
+    const statusEl = document.getElementById('status');
+    const qrcodeEl = document.getElementById('qrcode');
+    let qrInstance = null;
+
+    socket.on('qr', (qrData) => {
+      statusEl.className = 'status waiting';
+      statusEl.innerHTML = '📱 Scan the QR code with WhatsApp';
+      qrcodeEl.innerHTML = '';
+
+      qrInstance = new QRCode(qrcodeEl, {
+        text: qrData,
+        width: 256,
+        height: 256,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    });
+
+    socket.on('connected', () => {
+      statusEl.className = 'status connected';
+      statusEl.innerHTML = '✅ Bot Connected Successfully!';
+      qrcodeEl.innerHTML = '🎉';
+    });
+
+    socket.on('connect_error', () => {
+      statusEl.className = 'status error';
+      statusEl.innerHTML = '❌ Cannot connect to bot server';
+    });
+  </script>
+</body>
+  </html>
