@@ -53,7 +53,7 @@ app.get('/pair', (req, res) => {
 });
 
 httpServer.listen(PORT, () => {
-  console.log(`🌐 Server running on port ${PORT}`);
+  console.log('Server running on port ' + PORT);
 });
 
 async function saveSessionToSupabase() {
@@ -66,9 +66,9 @@ async function saveSessionToSupabase() {
       .from('bu_sessions')
       .upsert({ id: SESSION_ID, data: base64Data });
     if (error) throw error;
-    console.log('💾 Session saved to Supabase');
+    console.log('Session saved to Supabase');
   } catch (err) {
-    console.error('❌ Failed to save session:', err.message);
+    console.error('Failed to save session: ' + err.message);
   }
 }
 
@@ -80,17 +80,17 @@ async function loadSessionFromSupabase() {
       .eq('id', SESSION_ID)
       .single();
     if (error || !data) {
-      console.log('📭 No session found in Supabase. Fresh start.');
+      console.log('No session found in Supabase. Fresh start.');
       return false;
     }
     await fs.mkdir(SESSION_DIR, { recursive: true });
     const zipBuffer = Buffer.from(data.data, 'base64');
     const zip = new AdmZip(zipBuffer);
     zip.extractAllTo(SESSION_DIR, true);
-    console.log('📦 Session loaded from Supabase');
+    console.log('Session loaded from Supabase');
     return true;
   } catch (err) {
-    console.error('❌ Failed to load session:', err.message);
+    console.error('Failed to load session: ' + err.message);
     return false;
   }
 }
@@ -134,37 +134,35 @@ async function startBot() {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      console.log('📱 QR Code generated - visit /pair to scan');
+      console.log('QR Code generated - visit /pair to scan');
       io.emit('qr', qr);
     }
 
     if (connection === 'open') {
-      console.log('✅ ADEZ TECH Bot Connected!');
+      console.log('ADEZ TECH Bot Connected!');
       await saveSessionToSupabase();
       io.emit('connected');
-      const ownerJid = `${process.env.OWNER_NUMBER}@s.whatsapp.net`;
+      const ownerJid = process.env.OWNER_NUMBER + '@s.whatsapp.net';
       await sock.sendMessage(ownerJid, {
-        text: `✅ *${process.env.BOT_NAME}* is now online!\n\n🤖 Bot is ready\n⌨️ Prefix: ${process.env.PREFIX}\n\n_Powered by ADEZ TECH_`
+        text: '*' + process.env.BOT_NAME + '* is now online!\n\nBot is ready\nPrefix: ' + process.env.PREFIX + '\n\nPowered by ADEZ TECH'
       });
     }
 
     if (connection === 'close') {
       const statusCode = new Boom(lastDisconnect?.error)?.output?.statusCode;
       const errorMessage = lastDisconnect?.error?.message || '';
-      console.log('🔌 Connection closed. Status:', statusCode);
+      console.log('Connection closed. Status: ' + statusCode);
 
       if (errorMessage.includes('conflict') ||
           errorMessage.includes('Conflict')) {
-        console.log('⚠️ CONFLICT DETECTED!');
+        console.log('CONFLICT DETECTED! Stopping...');
         process.exit(1);
       }
 
       if (statusCode === DisconnectReason.loggedOut) {
-        console.log('🚪 Logged out. Clearing session...');
+        console.log('Logged out. Clearing session...');
         await fs.rm(SESSION_DIR, { recursive: true, force: true });
         startBot();
       } else if (statusCode === DisconnectReason.restartRequired) {
-        console.log('🔄 Restart required...');
+        console.log('Restart required...');
         startBot();
-      } else {
-        console.log('🔄 R
