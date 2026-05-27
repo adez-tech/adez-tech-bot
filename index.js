@@ -137,4 +137,70 @@ async function startBot() {
 
   // ─── QR Code via Socket.IO ────────────────────────────────────
   sock.ev.on('connection.update', async (update) => {
-    const { connection,
+    const { connection, lastDisconnect, qr } = update;
+
+    if (qr) {
+      console.log('📱 QR Code generated - visit /pair to scan');
+      io.emit('qr', qr);
+    }
+
+    if (connection === 'open') {
+      console.log('✅ ADEZ TECH Bot Connected!');
+      await saveSessionToSupabase();
+      io.emit('connected');
+
+      const ownerJid = `${process.env.OWNER_NUMBER}@s.whatsapp.net`;
+      await sock.sendMessage(ownerJid, {
+        text: `✅ *${process.env.BOT_NAME}* is now online!\n\n🤖 Bot is ready to use\n⌨️ Prefix: ${process.env.PREFIX}\n\n_Powered by ADEZ TECH_`
+      });
+    }
+
+    if (connection === 'close') {
+      const statusCode = new Boom(lastDisconnect?.error)?.output?.statusCode;
+      const errorMessage = lastDisconnect?.error?.message || '';
+
+      console.log('🔌 Connection closed. Status:', statusCode);
+
+      if (errorMessage.includes('conflict') || errorMessage.includes('Conflict')) {
+        console.log('⚠️ CONFLICT DETECTED: Bot running in two places!');
+        console.log('🛑 Stopping this instance...');
+        process.exit(1);
+      }
+
+      if (statusCode === DisconnectReason.loggedOut) {
+        console.log('🚪 Bot logged out. Clearing session...');
+        await fs.rm(SESSION_DIR, { recursive: true, force: true });
+        startBot();
+      } else if (statusCode === DisconnectReason.restartRequired) {
+        console.log('🔄 Restart required. Restarting...');
+        startBot();
+      } else {
+        console.log('🔄 Reconnecting in 5 seconds...');
+        setTimeout(startBot, 5000);
+      }
+    }
+  });
+
+  // ─── Save Credentials ─────────────────────────────────────────
+  sock.ev.on('creds.update', async () => {
+    await saveCreds();
+    throttledSave();
+  });
+
+  // ─── Handle Messages ──────────────────────────────────────────
+  sock.ev.on('messages.upsert', async (messageUpdate) => {
+    try {
+      await handleMessage(sock, messageUpdate);
+    } catch (err) {
+      console.error('❌ Message handling error:', err.message);
+    }
+  });
+
+  return sock;
+}
+
+// ─── Start Everything ─────────────────────────────────────────────
+startBot().catch(err => {
+  console.error('❌ Fatal error starting bot:', err);
+  process.exit(1);
+});
