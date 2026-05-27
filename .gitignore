@@ -1,0 +1,16 @@
+# Secret keys - NEVER upload these
+.env
+
+# WhatsApp session files - sensitive login data
+session/
+
+# Node modules - too large, Render installs these automatically
+node_modules/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
